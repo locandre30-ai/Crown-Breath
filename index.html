@@ -1,0 +1,597 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width,initial-scale=1" />
+	<title>Crown Breath</title>
+	<style>
+		/*
+			Crown Breath — single-file app
+			Host on GitHub Pages / Netlify / Vercel, then embed in Notion via iframe.
+		*/
+
+		:root{
+			/* === COLORS (adjust here) === */
+			--bg0:#0b0f14;
+			--bg1:#0f1620;
+			--panel: rgba(255,255,255,0.06);
+			--panel2: rgba(255,255,255,0.09);
+			--text:#e8edf6;
+			--muted: rgba(232,237,246,0.72);
+
+			/* Gold / crown accent */
+			--gold:#d8b35f;
+			--gold2:#f5d58a;
+
+			/* Glow strength */
+			--glow: 18px;
+			--strokeW: 5;
+		}
+
+		*{ box-sizing:border-box; }
+		html,body{
+			height:100%;
+			margin:0;
+			font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+			background: radial-gradient(1200px 800px at 20% 10%, rgba(216,179,95,0.10), transparent 55%),
+			            radial-gradient(900px 700px at 90% 40%, rgba(90,160,255,0.10), transparent 55%),
+			            linear-gradient(180deg, var(--bg0), var(--bg1));
+			color:var(--text);
+		}
+
+		.wrap{
+			min-height:100%;
+			display:flex;
+			align-items:center;
+			justify-content:center;
+			padding:18px;
+		}
+
+		.card{
+			width:min(760px, 100%);
+			background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
+			border: 1px solid rgba(255,255,255,0.10);
+			box-shadow:
+				0 20px 60px rgba(0,0,0,0.50),
+				inset 0 1px 0 rgba(255,255,255,0.08);
+			border-radius: 18px;
+			padding: 18px 18px 16px;
+		}
+
+		.header{
+			display:flex;
+			align-items:center;
+			justify-content:space-between;
+			gap:12px;
+			margin-bottom: 10px;
+		}
+
+		.brand{
+			display:flex;
+			align-items:center;
+			gap:10px;
+			min-width: 0;
+		}
+		.badge{
+			width:34px;height:34px;border-radius:12px;
+			display:grid;place-items:center;
+			background: linear-gradient(180deg, rgba(216,179,95,0.22), rgba(216,179,95,0.06));
+			border: 1px solid rgba(216,179,95,0.35);
+			box-shadow: 0 0 0 1px rgba(0,0,0,0.25), 0 10px 28px rgba(0,0,0,0.35);
+		}
+		.badge span{ filter: drop-shadow(0 6px 18px rgba(216,179,95,0.25)); }
+
+		.titleWrap{ min-width:0; }
+		.title{
+			font-weight: 720;
+			letter-spacing: 0.2px;
+			font-size: 16px;
+			line-height: 1.2;
+			margin: 0;
+		}
+		.sub{
+			margin: 3px 0 0;
+			color: var(--muted);
+			font-size: 12.5px;
+			line-height: 1.2;
+		}
+
+		.meta{
+			display:flex;
+			gap:10px;
+			align-items:center;
+			flex-wrap:wrap;
+			justify-content:flex-end;
+		}
+
+		.pill{
+			padding: 8px 10px;
+			border-radius: 999px;
+			background: var(--panel);
+			border: 1px solid rgba(255,255,255,0.10);
+			font-size: 12.5px;
+			color: var(--muted);
+			display:flex;
+			gap:8px;
+			align-items:center;
+		}
+		.dot{
+			width:7px;height:7px;border-radius:999px;
+			background: rgba(216,179,95,0.65);
+			box-shadow: 0 0 14px rgba(216,179,95,0.35);
+		}
+
+		.grid{
+			display:grid;
+			grid-template-columns: 1.3fr 0.9fr;
+			gap: 14px;
+			align-items: center;
+			margin-top: 12px;
+		}
+
+		@media (max-width: 720px){
+			.grid{ grid-template-columns: 1fr; }
+		}
+
+		.stage{
+			background: rgba(0,0,0,0.16);
+			border: 1px solid rgba(255,255,255,0.09);
+			border-radius: 16px;
+			padding: 14px;
+			display:grid;
+			place-items:center;
+			overflow:hidden;
+			position: relative;
+		}
+
+		/* Triangle + glow */
+		svg{
+			width: min(420px, 100%);
+			height: auto;
+			display:block;
+		}
+
+		.tri-base{
+			stroke: rgba(232,237,246,0.18);
+			stroke-width: var(--strokeW);
+			fill: none;
+		}
+
+		.tri-ghost{
+			stroke: rgba(216,179,95,0.12);
+			stroke-width: calc(var(--strokeW) + 2px);
+			fill:none;
+			filter: blur(0.2px);
+		}
+
+		.tri-progress{
+			stroke: url(#goldGrad);
+			stroke-width: calc(var(--strokeW) + 1px);
+			fill: none;
+			stroke-linecap: round;
+			stroke-linejoin: round;
+			filter: drop-shadow(0 0 var(--glow) rgba(216,179,95,0.55));
+		}
+
+		.hud{
+			width:100%;
+			display:flex;
+			flex-direction:column;
+			gap:10px;
+			padding: 4px 4px 0;
+		}
+
+		.cue{
+			font-size: clamp(20px, 3.2vw, 34px);
+			font-weight: 760;
+			letter-spacing: 0.2px;
+			margin: 0;
+		}
+		.countdown{
+			font-variant-numeric: tabular-nums;
+			font-size: 15px;
+			color: var(--muted);
+		}
+
+		.controls{
+			display:flex;
+			gap:10px;
+			flex-wrap:wrap;
+		}
+		button{
+			appearance:none;
+			border:none;
+			border-radius: 12px;
+			padding: 11px 12px;
+			font-weight: 650;
+			letter-spacing: 0.15px;
+			color: var(--text);
+			background: var(--panel2);
+			border: 1px solid rgba(255,255,255,0.14);
+			cursor:pointer;
+			transition: transform .08s ease, background .2s ease, border-color .2s ease, opacity .2s ease;
+			user-select:none;
+		}
+		button:hover{ transform: translateY(-1px); border-color: rgba(216,179,95,0.35); }
+		button:active{ transform: translateY(0px); }
+		button.primary{
+			background: linear-gradient(180deg, rgba(216,179,95,0.28), rgba(216,179,95,0.12));
+			border-color: rgba(216,179,95,0.45);
+		}
+		button:disabled{
+			opacity: 0.45;
+			cursor: not-allowed;
+		}
+
+		.progressBar{
+			height: 10px;
+			background: rgba(255,255,255,0.07);
+			border: 1px solid rgba(255,255,255,0.10);
+			border-radius: 999px;
+			overflow:hidden;
+		}
+		.progressBar > div{
+			height:100%;
+			width:0%;
+			background: linear-gradient(90deg, rgba(216,179,95,0.35), rgba(245,213,138,0.75));
+			box-shadow: 0 0 18px rgba(216,179,95,0.30);
+		}
+
+		.foot{
+			margin-top: 10px;
+			color: rgba(232,237,246,0.55);
+			font-size: 12px;
+			line-height: 1.35;
+		}
+		.foot code{
+			color: rgba(232,237,246,0.75);
+		}
+	</style>
+</head>
+<body>
+	<div class="wrap">
+		<div class="card" role="application" aria-label="Crown Breath">
+			<div class="header">
+				<div class="brand">
+					<div class="badge" aria-hidden="true"><span>👑</span></div>
+					<div class="titleWrap">
+						<p class="title">Crown Breath</p>
+						<p class="sub">Triangle breath guide • 4–4–6 • 3 minutes</p>
+					</div>
+				</div>
+				<div class="meta">
+					<div class="pill"><span class="dot"></span><span id="stateText">Ready</span></div>
+					<div class="pill"><span>Cycle</span><strong id="cycleText" style="color:var(--text);font-weight:720;">0</strong></div>
+				</div>
+			</div>
+
+			<div class="grid">
+				<div class="stage">
+					<svg viewBox="0 0 420 360" aria-label="Breathing triangle">
+						<defs>
+							<linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+								<stop offset="0%" stop-color="rgba(216,179,95,0.70)"/>
+								<stop offset="50%" stop-color="rgba(245,213,138,0.95)"/>
+								<stop offset="100%" stop-color="rgba(216,179,95,0.70)"/>
+							</linearGradient>
+						</defs>
+
+						<!--
+							=== SHAPE POINTS (adjust here) ===
+							Default triangle points:
+								A (bottom-left)  = (70, 290)
+								B (top)          = (210, 60)
+								C (bottom-right) = (350, 290)
+							To change the triangle, update the "points" below AND the JS points array.
+						-->
+						<polyline class="tri-ghost" points="70,290 210,60 350,290 70,290"></polyline>
+						<polyline class="tri-base"  points="70,290 210,60 350,290 70,290"></polyline>
+
+						<!-- Animated progress stroke -->
+						<polyline id="progressPath" class="tri-progress" points="70,290 210,60 350,290 70,290"></polyline>
+					</svg>
+				</div>
+
+				<div class="hud">
+					<div>
+						<p class="cue" id="cueText">Breathe.</p>
+						<div class="countdown">
+							<span id="segmentText">—</span>
+							<span aria-hidden="true"> • </span>
+							<span>Time left: </span><strong id="timeLeft">03:00</strong>
+						</div>
+					</div>
+
+					<div class="progressBar" aria-label="Session progress">
+						<div id="sessionBar"></div>
+					</div>
+
+					<div class="controls">
+						<button id="startBtn" class="primary">Start</button>
+						<button id="pauseBtn" disabled>Pause</button>
+						<button id="resetBtn" disabled>Reset</button>
+					</div>
+
+					<div class="foot">
+						Adjust timing + colors inside the comments in this file. Embed in Notion with an iframe to your hosted URL.
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<script>
+		/*
+			=========================================================
+			CROWN BREATH — SETTINGS (adjust here)
+			=========================================================
+
+			- inhale / hold / exhale durations
+			- total session length
+			- colors (CSS variables in :root)
+			- shape points (below + SVG polyline points)
+		*/
+
+		// === BREATH TIMING (seconds) ===
+		const INHALE_SEC = 4; // <-- adjust inhale duration
+		const HOLD_SEC   = 4; // <-- adjust hold duration
+		const EXHALE_SEC = 6; // <-- adjust exhale duration
+
+		// === TOTAL SESSION LENGTH (seconds) ===
+		const SESSION_SEC = 3 * 60; // <-- adjust total session length (e.g., 180 = 3 minutes)
+
+		// === TRIANGLE POINTS (must match the SVG polyline points) ===
+		// A = bottom-left, B = top, C = bottom-right, then return to A to close.
+		const POINTS = [
+			{ x: 70,  y: 290 }, // A
+			{ x: 210, y: 60  }, // B
+			{ x: 350, y: 290 }, // C
+			{ x: 70,  y: 290 }  // A (close)
+		];
+
+		/*
+			Segment meaning:
+				Segment 0: A -> B  (Inhale)
+				Segment 1: B -> C  (Hold)
+				Segment 2: C -> A  (Exhale)
+		*/
+		const SEGMENTS = [
+			{ label: "Inhale", sec: INHALE_SEC },
+			{ label: "Hold",   sec: HOLD_SEC   },
+			{ label: "Exhale", sec: EXHALE_SEC }
+		];
+
+		// =========================================================
+		// DOM
+		// =========================================================
+		const progressPath = document.getElementById("progressPath");
+		const cueText      = document.getElementById("cueText");
+		const segmentText  = document.getElementById("segmentText");
+		const timeLeftEl   = document.getElementById("timeLeft");
+		const sessionBar   = document.getElementById("sessionBar");
+		const stateText    = document.getElementById("stateText");
+		const cycleText    = document.getElementById("cycleText");
+
+		const startBtn = document.getElementById("startBtn");
+		const pauseBtn = document.getElementById("pauseBtn");
+		const resetBtn = document.getElementById("resetBtn");
+
+		// =========================================================
+		// Helpers
+		// =========================================================
+		function fmtTime(sec){
+			const s = Math.max(0, Math.ceil(sec));
+			const mm = String(Math.floor(s/60)).padStart(2,"0");
+			const ss = String(s%60).padStart(2,"0");
+			return `${mm}:${ss}`;
+		}
+
+		function dist(a,b){
+			const dx = a.x - b.x, dy = a.y - b.y;
+			return Math.hypot(dx, dy);
+		}
+
+		// Precompute segment lengths and cumulative lengths for the polyline
+		const segLens = [];
+		let totalLen = 0;
+		for(let i=0;i<POINTS.length-1;i++){
+			const L = dist(POINTS[i], POINTS[i+1]);
+			segLens.push(L);
+			totalLen += L;
+		}
+
+		// Set stroke-dasharray so we can "reveal" a portion (glowing line travel)
+		progressPath.style.strokeDasharray = `${totalLen}`;
+		progressPath.style.strokeDashoffset = `${totalLen}`; // hidden initially
+
+		// =========================================================
+		// State
+		// =========================================================
+		let running = false;
+		let paused = false;
+
+		let sessionStartTs = 0;
+		let pauseAccumMs = 0;
+		let pauseStartTs = 0;
+
+		let rafId = 0;
+		let lastCue = "";
+
+		// =========================================================
+		// Core animation: determine where we are in the breath cycle
+		// =========================================================
+		const cycleSec = SEGMENTS.reduce((a,s)=>a+s.sec, 0);
+
+		function getBreathState(elapsedSec){
+			const t = elapsedSec % cycleSec;
+
+			let acc = 0;
+			for(let i=0;i<SEGMENTS.length;i++){
+				const seg = SEGMENTS[i];
+				if(t < acc + seg.sec){
+					const within = t - acc;        // seconds into this segment
+					const p = within / seg.sec;    // 0..1 progress within segment
+					return { segIndex:i, segLabel:seg.label, segProgress:p };
+				}
+				acc += seg.sec;
+			}
+			// Fallback (should not hit)
+			return { segIndex:2, segLabel:"Exhale", segProgress:1 };
+		}
+
+		function cyclesCompleted(elapsedSec){
+			return Math.floor(elapsedSec / cycleSec);
+		}
+
+		// Map segment progress to polyline reveal length:
+		// reveal = completed segments lengths + current segment length * progress
+		function revealLength(segIndex, segProgress){
+			let L = 0;
+			for(let i=0;i<segIndex;i++) L += segLens[i];
+			L += segLens[segIndex] * segProgress;
+			return L;
+		}
+
+		function setUI({segLabel, segIndex, segProgress, elapsedSec, remainingSec}){
+			// Update cue (big text)
+			const cue = segLabel;
+			if(cue !== lastCue){
+				cueText.textContent = cue;
+				segmentText.textContent = `Phase: ${cue} (${SEGMENTS[segIndex].sec}s)`;
+				stateText.textContent = running ? (paused ? "Paused" : "Running") : "Ready";
+				lastCue = cue;
+			}
+
+			// Countdown
+			timeLeftEl.textContent = fmtTime(remainingSec);
+
+			// Session progress bar
+			const pct = Math.min(1, elapsedSec / SESSION_SEC) * 100;
+			sessionBar.style.width = `${pct}%`;
+
+			// Cycle counter
+			cycleText.textContent = String(cyclesCompleted(elapsedSec));
+
+			// Triangle reveal (glowing traveling line)
+			const revealed = revealLength(segIndex, segProgress);
+			const dashOffset = Math.max(0, totalLen - revealed);
+			progressPath.style.strokeDashoffset = `${dashOffset}`;
+		}
+
+		function tick(){
+			if(!running){ return; }
+
+			const now = performance.now();
+			const activeMs = now - sessionStartTs - pauseAccumMs;
+			const elapsedSec = activeMs / 1000;
+			const remainingSec = SESSION_SEC - elapsedSec;
+
+			if(remainingSec <= 0){
+				// Finish session
+				setUI({
+					segLabel: "Complete",
+					segIndex: 2,
+					segProgress: 1,
+					elapsedSec: SESSION_SEC,
+					remainingSec: 0
+				});
+				stop(true);
+				return;
+			}
+
+			const bs = getBreathState(elapsedSec);
+			setUI({
+				segLabel: bs.segLabel,
+				segIndex: bs.segIndex,
+				segProgress: bs.segProgress,
+				elapsedSec,
+				remainingSec
+			});
+
+			rafId = requestAnimationFrame(tick);
+		}
+
+		function start(){
+			if(running) return;
+
+			running = true;
+			paused = false;
+			sessionStartTs = performance.now();
+			pauseAccumMs = 0;
+			pauseStartTs = 0;
+			lastCue = "";
+
+			startBtn.disabled = true;
+			pauseBtn.disabled = false;
+			resetBtn.disabled = false;
+			pauseBtn.textContent = "Pause";
+			stateText.textContent = "Running";
+
+			rafId = requestAnimationFrame(tick);
+		}
+
+		function pauseToggle(){
+			if(!running) return;
+
+			if(!paused){
+				paused = true;
+				pauseStartTs = performance.now();
+				pauseBtn.textContent = "Resume";
+				stateText.textContent = "Paused";
+				cancelAnimationFrame(rafId);
+			} else {
+				paused = false;
+				pauseAccumMs += (performance.now() - pauseStartTs);
+				pauseStartTs = 0;
+				pauseBtn.textContent = "Pause";
+				stateText.textContent = "Running";
+				rafId = requestAnimationFrame(tick);
+			}
+		}
+
+		function stop(completed=false){
+			running = false;
+			paused = false;
+			cancelAnimationFrame(rafId);
+
+			startBtn.disabled = false;
+			pauseBtn.disabled = true;
+			resetBtn.disabled = false; // allow reset after completion too
+			pauseBtn.textContent = "Pause";
+			stateText.textContent = completed ? "Complete" : "Ready";
+		}
+
+		function reset(){
+			cancelAnimationFrame(rafId);
+			running = false;
+			paused = false;
+			sessionStartTs = 0;
+			pauseAccumMs = 0;
+			pauseStartTs = 0;
+			lastCue = "";
+
+			// Reset visuals
+			progressPath.style.strokeDashoffset = `${totalLen}`;
+			cueText.textContent = "Breathe.";
+			segmentText.textContent = "—";
+			timeLeftEl.textContent = fmtTime(SESSION_SEC);
+			sessionBar.style.width = "0%";
+			cycleText.textContent = "0";
+			stateText.textContent = "Ready";
+
+			startBtn.disabled = false;
+			pauseBtn.disabled = true;
+			resetBtn.disabled = true;
+		}
+
+		// Wire up buttons
+		startBtn.addEventListener("click", start);
+		pauseBtn.addEventListener("click", pauseToggle);
+		resetBtn.addEventListener("click", reset);
+
+		// Initialize UI
+		resetBtn.disabled = true;
+		timeLeftEl.textContent = fmtTime(SESSION_SEC);
+	</script>
+</body>
+</html>
